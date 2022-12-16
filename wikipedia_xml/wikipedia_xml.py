@@ -931,7 +931,7 @@ class Wikipedia(datasets.GeneratorBasedBuilder):
                     "section_title": datasets.Sequence(feature=datasets.Value("string")),
                     "text": datasets.Sequence(feature=datasets.Value("string")),
                     "media": datasets.Sequence(feature=datasets.Sequence(feature=datasets.Value("string"))),
-                    "category": datasets.Sequence(feature=datasets.Sequence(feature=datasets.Value("string"))),
+                    "category": datasets.Sequence(feature=datasets.Value("string")),
                 }
             ),
             # No default supervised_keys.
@@ -1019,7 +1019,7 @@ class Wikipedia(datasets.GeneratorBasedBuilder):
             """Cleans raw wikicode to extract text."""
             id_, title, raw_content = inputs
             try:
-                info_media, section_title, section_text, section_media, section_cat  = _parse_and_clean_wikicode(
+                info_media, section_title, section_text, section_media, category  = _parse_and_clean_wikicode(
                     raw_content, parser=mwparserfromhell, language=language)
             except (mwparserfromhell.parser.ParserError) as e:
                 logger.error("mwparserfromhell ParseError: %s", e)
@@ -1038,7 +1038,7 @@ class Wikipedia(datasets.GeneratorBasedBuilder):
                 "section_title": section_title,
                 "text": section_text,
                 "media": section_media,
-                "category": section_cat,
+                "category": category,
             }
 
         print("Parsing and cleaning Wikipedia examples")
@@ -1107,7 +1107,7 @@ def _parse_and_clean_wikicode(raw_content, parser, language):
     section_media = []
     section_title = []
     section_text = []
-    section_cat = []
+    category = []
     
     # Process infobox
     info_media = []
@@ -1139,7 +1139,7 @@ def _parse_and_clean_wikicode(raw_content, parser, language):
             try_remove_obj(heading, section)
 
         # parse contents
-        media, cat = [], []
+        media = []
         for link in section.ifilter_wikilinks(recursive=True):
             link_title = link.title
             
@@ -1149,7 +1149,7 @@ def _parse_and_clean_wikicode(raw_content, parser, language):
             
             if cat_patterns.match(str(link_title)):
                 cat_text = remove_prefix(link_title, cat_patterns)
-                cat.append(cat_text)
+                category.append(cat_text)
             
             # Remove wikilinks from content
             try_remove_obj(link, section)
@@ -1163,9 +1163,8 @@ def _parse_and_clean_wikicode(raw_content, parser, language):
         section_text.append(plain_text)
 
         section_media.append(media)
-        section_cat.append(cat)
 
-    return info_media, section_title, section_text, section_media, section_cat
+    return info_media, section_title, section_text, section_media, category
 
 
 def _construct_url(title, language):
